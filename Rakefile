@@ -30,30 +30,31 @@ task :deploy,[:tag] => :confirm do |t , args|
 
   deploy_options = {}
   deploy_options[:command] = {name:'deploy'}
-  # Loop through each region
-  if tag
-    app_options = {}
-    app_options[:app_id] = options['app_id']
-    app_revision = {}
-    app_revision[:revision] = tag
-    app_options[:app_source] = app_revision
-    client.update_app( app_options )
-  end
 
-  azs = ['east-1a','east-1b','east-1c','east-1d']
+  azs = ['us-east-1a','us-east-1b','us-east-1c','us-east-1d']
 
   azs.each do |zone|
     regions.each do |region, options|
+      p options
       deploy_options[:instance_ids] = []
       deploy_options[:app_id]   = options['app_id']
       deploy_options[:comment]  = "rake deploy from '#{Socket.gethostname}'"
       instances = client.describe_instances({layer_id: options['layer_id']})
       next if instances.nil? || instances.empty?
 
+      if tag
+        app_options = {}
+        app_options[:app_id] = options['app_id']
+        app_revision = {}
+        app_revision[:revision] = tag
+        app_options[:app_source] = app_revision
+        client.update_app( app_options )
+        tag = false
+      end
       # Capture the details for each 'online' instance
       instances[:instances].each do |instance|
        puts instance
-        if 'online' == instance[:status] && zone.to_s == instance[:availability_zone=]
+        if 'online' == instance[:status] && zone == instance[:availability_zone]
           deploy_options[:instance_ids] << instance[:instance_id]
           deploy_options[:stack_id] = instance[:stack_id]
         end
