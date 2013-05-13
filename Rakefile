@@ -3,11 +3,11 @@ require 'rubygems'
 require 'bundler'
 require 'yaml'
 require 'rake'
+require 'figaro'
+require 'sinatra'
 Bundler.require if defined?(Bundler)
 
 # Authenticate to AWS
-AWS.config(YAML.load_file('config/aws.yml')['production'])
-client = AWS::OpsWorks.new.client
 task :confirm do
     confirm_token = rand(36**6).to_s(36)
     STDOUT.puts "Confirm deploy? Enter '#{confirm_token}' to confirm:"
@@ -18,8 +18,15 @@ end
 
 desc "Deploy the app to the LIVE environment"
 task :deploy,[:tag] => :confirm do |t , args|
+  config_file = File.read(File.join( File.dirname(__FILE__), 'config', 'aws.yml.erb'))
+  AWS_CONFIG = YAML.load(ERB.new(config_file).result)['production']
+  puts AWS_CONFIG
+  AWS.config(AWS_CONFIG)
+  client = AWS::OpsWorks.new.client
   tag = args.tag
-  regions = YAML.load_file('config/opsworks.yml')
+  config_file2 = File.read(File.join( File.dirname(__FILE__), 'config', 'opsworks.yml.erb'))
+  regions = YAML.load(ERB.new(config_file2).result)['production']
+
 
   deploy_options = {}
   deploy_options[:command] = {name:'deploy'}
@@ -45,15 +52,15 @@ task :deploy,[:tag] => :confirm do |t , args|
 
       # Capture the details for each 'online' instance
       instances[:instances].each do |instance|
-        puts instance
-        if 'online' == instance[:status] && izone.to_s == instance[:availability_zone=]
+       puts instance
+        if 'online' == instance[:status] && zone.to_s == instance[:availability_zone=]
           deploy_options[:instance_ids] << instance[:instance_id]
           deploy_options[:stack_id] = instance[:stack_id]
         end
       end
 
-      puts "Deploying to #{deploy_options[:instance_ids].count} instances in the #{region.upcase} region..."
-      #deploy_id = client.create_deployment deploy_options
+      puts "Deploying to #{deploy_options[:instance_ids].count} instances in the #{region.upcase} region... in Zone #{zone.upcase}"
+      deploy_id = client.create_deployment deploy_options
 
 
       deployment_options = {}
@@ -63,7 +70,7 @@ task :deploy,[:tag] => :confirm do |t , args|
 
       begin
         sleep 5
-        #deployments = client.describe_deployments deployment_options
+        deployments = client.describe_deployments deployment_options
         next if deployments.nil? || deployments.empty?
         response = "running"
         deployments[:deployments].each do |deploy|
