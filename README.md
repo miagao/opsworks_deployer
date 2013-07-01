@@ -25,7 +25,7 @@ rake deploy
 
 Deploys an app with specified branch/revision/tag:
 
-rake deploy['<tag or revision or branch>']
+rake deploy['\<tag name, revision or branch\>']
 	
 
 Deploy procedure:
