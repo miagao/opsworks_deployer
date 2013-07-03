@@ -3,6 +3,15 @@ opsworks-deployer
 
 Task to deploy via CLI on Amazon OpsWorks.
 
+Installation:
+============
+
+```
+gem install opsworks_deployer
+```
+
+* http://rubygems.org/gems/opsworks_deployer
+
 Usage:
 =====
 
